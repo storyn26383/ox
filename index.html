@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>井字遊戲</title>
+	<link rel="stylesheet" href="./jquery.mobile-1.3.2.min.css">
+	<script src="./jquery.js"></script>
+	<script src="./jquery.mobile-1.3.2.min.js"></script>
+	<style>
+		* {
+			overflow: hidden !important;
+		}
+		.ox {
+			margin: 5px !important;
+			padding: 5px !important;
+			border: 1px solid #aaa !important;
+		}
+	</style>
+</head>
+<body>
+<div data-role="page">
+	<div id="header" data-role="header">
+		<h1>井字遊戲</h1>
+	</div>
+
+	<div id="content" data-role="content">
+		<div class="ui-grid-b" id="ox_block">
+			<div class="ui-block-a ox" id="ox_0_0">&nbsp;</div>
+			<div class="ui-block-b ox" id="ox_0_1">&nbsp;</div>
+			<div class="ui-block-c ox" id="ox_0_2">&nbsp;</div>
+			<div class="ui-block-a ox" id="ox_1_0">&nbsp;</div>
+			<div class="ui-block-b ox" id="ox_1_1">&nbsp;</div>
+			<div class="ui-block-c ox" id="ox_1_2">&nbsp;</div>
+			<div class="ui-block-a ox" id="ox_2_0">&nbsp;</div>
+			<div class="ui-block-b ox" id="ox_2_1">&nbsp;</div>
+			<div class="ui-block-c ox" id="ox_2_2">&nbsp;</div>
+		</div>
+	</div>
+
+	<div id="footer" data-role="footer">
+		<h4 id="now"></h4>
+	</div>
+</div>
+<script>
+function min(n, m) {
+	return n > m ? m : n;
+}
+
+function zeroFull(n) {
+	return n < 10 ? '0' + n : n;
+}
+
+function getTime() {
+	var date = new Date(),
+		year = date.getFullYear(),
+		month = zeroFull(date.getMonth() + 1),
+		day = zeroFull(date.getDate()),
+		hour =  zeroFull(date.getHours()),
+		minute =  zeroFull(date.getMinutes()),
+		second = zeroFull(date.getSeconds());
+
+	return timeStr = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
+}
+
+function getRandom(n) {
+	return Math.floor(Math.random() * n);
+}
+
+var oxGame = {
+	maxSize: 0,
+	win: 0,
+	lose: 0,
+	draw: 0,
+	step: 0,
+	oxType: [
+		[0, 0, 0], // -1: x
+		[0, 0, 0], //  0: empty
+		[0, 0, 0]  //  1: o
+	],
+	oxLine: [
+		[{x: 0, y: 0},{x: 0, y: 1},{x: 0, y: 2}],
+		[{x: 1, y: 0},{x: 1, y: 1},{x: 1, y: 2}],
+		[{x: 2, y: 0},{x: 2, y: 1},{x: 2, y: 2}],
+		[{x: 0, y: 0},{x: 1, y: 0},{x: 2, y: 0}],
+		[{x: 0, y: 1},{x: 1, y: 1},{x: 2, y: 1}],
+		[{x: 0, y: 2},{x: 1, y: 2},{x: 2, y: 2}],
+		[{x: 0, y: 0},{x: 1, y: 1},{x: 2, y: 2}],
+		[{x: 0, y: 2},{x: 1, y: 1},{x: 2, y: 0}]
+	],
+	oxCorner:[
+		{x: 0, y: 0},
+		{x: 0, y: 2},
+		{x: 2, y: 2},
+		{x: 2, y: 0}
+	],
+	oxCross:[
+		{x: 0, y: 1},
+		{x: 1, y: 2},
+		{x: 2, y: 1},
+		{x: 1, y: 0}
+	],
+	init: function() {
+		$('.ox').click(function() {
+			var id = $(this).attr('id'),
+				x = id.split('_')[1],
+				y = id.split('_')[2];
+
+			if (!oxGame.oxType[x][y]){
+				oxGame.showOX(x, y, 1);
+			}
+		});
+
+		$(window).on('resize', function() {
+			var documentWidth = $(window).width() - 30,
+				documentHeight = $(window).height() - $('#header').outerHeight() - $('#footer').outerHeight() - 30;
+			oxGame.maxSize = Math.floor(min(documentWidth, documentHeight) / 3);
+
+			$('.ox').css({
+				'width': (oxGame.maxSize - 10) + 'px',
+				'height': (oxGame.maxSize - 10) + 'px'
+			});
+
+			$('.ox img').css({
+				'width': (oxGame.maxSize - 20) + 'px',
+				'height': (oxGame.maxSize - 20) + 'px'
+			});
+
+			$('#ox_block').css({
+				'width': oxGame.maxSize * 3 + 'px',
+				'height': oxGame.maxSize * 3 + 'px',
+				'margin': (documentHeight - (oxGame.maxSize * 3)) / 2 + 'px ' + (documentWidth - (oxGame.maxSize * 3)) / 2 + 'px'
+			});
+		});
+
+		$(window).trigger('resize');
+	},
+	cleanOX: function(m) {
+		var msg = '';
+		switch (m) {
+			case 1:
+				str = '恭喜您贏電腦了！\n';
+			break;
+			case -1:
+				str = '哈哈哈！輸給電腦了！\n';
+			break;
+			case 0:
+				str = '哎呀！和局了，再一次吧！\n';
+			break;
+		}
+		str += '贏：' + oxGame.win + '\n';
+		str += '和：' + oxGame.draw + '\n';
+		str += '輸：' + oxGame.lose;
+		alert(str);
+
+		$('.ox').html('');
+		oxGame.step = 0;
+		oxGame.oxType = [
+			[0, 0, 0],
+			[0, 0, 0],
+			[0, 0, 0]
+		];
+	},
+	checkStatus: function(oxArray) {
+		var returnArray = [];
+
+		for (var i = 0; i < 8; i++) {
+			var sum = 0;
+			for (var j = 0; j < 3; j++) {
+				sum += oxArray[oxGame.oxLine[i][j].x][oxGame.oxLine[i][j].y];
+			}
+			returnArray.push(sum);
+		}
+
+		return returnArray;
+	},
+	checkWin: function(m) {
+		var checkArray = oxGame.checkStatus(oxGame.oxType);
+
+		for (var i = 0; i < 8; i++) {
+			if (checkArray[i] == 3) { // o win
+				oxGame.win++;
+				oxGame.cleanOX(1);
+				return false;
+			} else if (checkArray[i] == -3) { // x win
+				oxGame.lose++;
+				oxGame.cleanOX(-1);
+				return false;
+			}
+		}
+
+		if (m == 1) {
+			oxGame.ai();
+		}
+	},
+	findEmpyt: function(i) {
+		var x, y;
+		for (var j = 0; j < 3; j++) {
+			if (!oxGame.oxType[oxGame.oxLine[i][j].x][oxGame.oxLine[i][j].y]) {
+				x = oxGame.oxLine[i][j].x;
+				y = oxGame.oxLine[i][j].y;
+			}
+		}
+		return {x: x, y: y};
+	},
+	oxTypeTemp: function(oxArray, x, y) {
+		var oxArrayTemp = [];
+		for (var i = 0; i < 3; i++) {
+			oxArrayTemp[i] = [];
+			for (var j = 0; j < 3; j++) {
+				if (i == x && j == y) {
+					oxArrayTemp[i][j] = 1;
+				} else {
+					oxArrayTemp[i][j] = oxArray[i][j];
+				}
+			}
+		}
+		return oxArrayTemp;
+	},
+	showOX: function(x, y, type) {
+		if (oxGame.step++ < 9) {
+			var $obj = $('#ox_' + x + '_' + y);
+				$img = $('<img />'),
+				img = '';
+
+			switch (type) {
+				case 1:
+					img = 'o';
+				break;
+				case -1:
+					img = 'x';
+				break;
+			}
+
+			$img
+				.attr('src', './images/' + img + '.png')
+				.css({
+					'width': (oxGame.maxSize - 20) + 'px',
+					'height': (oxGame.maxSize - 20) + 'px'
+				});
+			$obj.html($img);
+			oxGame.oxType[x][y] = type;
+			$img.get(0).onload = function(){
+				oxGame.checkWin(type);
+			};
+		}
+	},
+	ai: function() {
+		if (oxGame.step > 0 && oxGame.step < 9) { // player first
+			var checkArray = oxGame.checkStatus(oxGame.oxType),
+				nextStep = false,
+				x = getRandom(3),
+				y = getRandom(3);
+
+			for (var i = 0; i < 8; i++) { // x
+				if (checkArray[i] == -2) {
+					var empty = oxGame.findEmpyt(i);
+					x = empty.x;
+					y = empty.y;
+					nextStep = true;
+					break;
+				}
+			}
+
+			if (!nextStep) {
+				for (var i = 0; i < 8; i++) { // o
+					if (checkArray[i] == 2) {
+						var empty = oxGame.findEmpyt(i);
+						x = empty.x;
+						y = empty.y;
+						nextStep = true;
+						break;
+					}
+				}
+			}
+
+			if (!nextStep && oxGame.step == 1) { // corner
+				var flag = undefined;
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCorner[i].x][oxGame.oxCorner[i].y]) {
+						flag = i;
+						break;
+					}
+				}
+				if (flag != undefined) {
+					x = 1;
+					y = 1;
+					nextStep = true;
+				}
+			}
+
+			if (!nextStep && oxGame.step == 1) { // corss
+				var flag = undefined,
+					random = getRandom(2);
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCross[i].x][oxGame.oxCross[i].y]) {
+						flag = i;
+						break;
+					}
+				}
+				if (flag != undefined) {
+					x = oxGame.oxCorner[(flag + random) % 4].x;
+					y = oxGame.oxCorner[(flag + random) % 4].y;
+					nextStep = true;
+				}
+			}
+
+			if (!nextStep && oxGame.step == 1 && oxGame.oxType[1][1] == 1) { // center
+				var random = getRandom(4);
+				x = oxGame.oxCorner[random].x;
+				y = oxGame.oxCorner[random].y;
+				nextStep = true;
+			}
+
+			if (!nextStep && oxGame.step == 3 && oxGame.oxType[1][1] == -1) { // corner
+				var count = 0,
+					random = getRandom(4);
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCorner[i].x][oxGame.oxCorner[i].y] == 1) {
+						count++;
+					}
+				}
+				if (count == 2) {
+					x = oxGame.oxCross[random].x;
+					y = oxGame.oxCross[random].y;
+					nextStep = true;
+				}
+			}
+
+			if (!nextStep && oxGame.step == 3) { // corss
+				var count = 0;
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCross[i].x][oxGame.oxCross[i].y] == 1) {
+						count++;
+					}
+				}
+				if (count == 2) {
+					x = 1;
+					y = 1;
+					nextStep = true;
+				}
+			}
+
+			if (!nextStep && oxGame.step == 3 && oxGame.oxType[1][1] == 1) { // corner + center
+				var random = getRandom(2) == 0 ? 3 : 1;
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCorner[i].x][oxGame.oxCorner[i].y] == 1) {
+						flag = i;
+						break;
+					}
+				}
+				x = oxGame.oxCorner[(flag + random) % 4].x;
+				y = oxGame.oxCorner[(flag + random) % 4].y;
+				nextStep = true;
+			}
+
+			if (!nextStep && oxGame.step == 3) { // corner + corss
+				var count = 0,
+					flag = 0,
+					random = getRandom(2);
+				for (var i = 0; i < 4; i++) {
+					if (oxGame.oxType[oxGame.oxCorner[i].x][oxGame.oxCorner[i].y] == 1) {
+						count++;
+					}
+					if (oxGame.oxType[oxGame.oxCross[i].x][oxGame.oxCross[i].y] == 1) {
+						count++;
+						flag = i;
+					}
+				}
+				if (count == 2 &&  !oxGame.oxType[1][1]) {
+					x = 1;
+					y = 1;
+					nextStep = true;
+				} else if (count == 2) {
+					x = oxGame.oxCorner[(flag + random) % 4].x;
+					y = oxGame.oxCorner[(flag + random) % 4].y;
+					nextStep = true;
+				}
+			}
+
+			if (!nextStep) { // double line
+				for (var i = 0; i < 3; i++) {
+					if (nextStep) {
+						break;
+					}
+					for (var j = 0; j < 3; j++) {
+						if (!oxGame.oxType[i][j]) {
+							var oxTypeTemp = oxGame.oxTypeTemp(oxGame.oxType, x, y),
+								checkArray = oxGame.checkStatus(oxTypeTemp),
+								count = 0;
+							for (var k = 0; k < 8; k++) {
+								if (checkArray[k] == 2) {
+									count++;
+								}
+							}
+							if (count > 1) {
+								x = i;
+								y = j;
+								nextStep = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			if (!nextStep) {
+				while (oxGame.oxType[x][y]) {
+					x = getRandom(3);
+					y = getRandom(3);
+				}
+			}
+
+			oxGame.showOX(x, y, -1);
+		} else if (oxGame.step == 9) {
+			oxGame.draw++;
+			oxGame.cleanOX(0);
+		}
+	}
+};
+
+$(function() {
+	$('#now').text(getTime());
+	setInterval(function (){
+		$('#now').text(getTime());
+	}, 1000);
+
+	oxGame.init();
+});
+</script>
+</body>
+</html>
